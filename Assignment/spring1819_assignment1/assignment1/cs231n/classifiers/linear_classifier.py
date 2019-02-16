@@ -54,7 +54,7 @@ class LinearClassifier(object):
       # replacement is faster than sampling without replacement.              #
       #########################################################################
       randidx = np.random.choice(num_train, batch_size,replace = True)
-      X_batch = X[randidx,:]
+      X_batch = X[randidx]
       y_batch = y[randidx]
       #########################################################################
       #                       END OF YOUR CODE                                #
@@ -118,11 +118,12 @@ class LinearClassifier(object):
     - reg: (float) regularization strength.
 
     Returns: A tuple containing:
-    - loss as a single float
+    - loss as a single floats
     - gradient with respect to self.W; an array of the same shape as W
     """
-    return LinearSVM.loss(self, X_batch, y_batch, reg)
-    # pass
+    loss = 0
+    dW = 0
+    return loss,dW
     
 
 class LinearSVM(LinearClassifier):
