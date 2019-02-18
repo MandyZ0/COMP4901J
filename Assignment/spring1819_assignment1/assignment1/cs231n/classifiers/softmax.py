@@ -42,8 +42,8 @@ def softmax_loss_naive(W, X, y, reg):
       else:
         dW[:,j] += prob[j] * X[i]
   
-  loss = loss / num_train + 0.5 * reg * np.sum(W * W)
-  dW = dW / num_train + reg * W
+  loss = loss / num_train + reg * np.sum(W * W)
+  dW = dW / num_train + 2 * reg * W
 
   #############################################################################
   #                          END OF YOUR CODE                                 #
@@ -72,11 +72,11 @@ def softmax_loss_vectorized(W, X, y, reg):
   num_train = X.shape[0]
   scores = X.dot(W)   #(N,C)
   prob = np.exp(scores) / np.sum(np.exp(scores),axis=1).reshape(num_train,1)
-  loss = np.sum(-np.log(prob[np.arange(num_train),list(y)])) / num_train + 0.5 * reg * np.sum(W * W)
+  loss = np.sum(-np.log(prob[np.arange(num_train),list(y)])) / num_train + reg * np.sum(W * W)
   
   prob[np.arange(num_train),list(y)] += -1
   dW = np.dot(X.T,prob)
-  dW = dW / num_train + reg * W
+  dW = dW / num_train + 2 * reg * W
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
