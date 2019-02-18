@@ -44,8 +44,8 @@ def svm_loss_naive(W, X, y, reg):
   loss /= num_train
   dW /= num_train
   # Add regularization to the loss.  / 
-  loss += 0.5 * reg * np.sum(W * W)
-  dW += reg * W
+  loss += reg * np.sum(W * W)
+  dW += 2 * reg * W
   #############################################################################
   # TODO:                                                                     #
   # Compute the gradient of the loss function and store it dW.                #
@@ -81,7 +81,7 @@ def svm_loss_vectorized(W, X, y, reg):
   correct_class_score = correct_class_score.reshape((num_train,1))
   margins = np.maximum(0,scores - correct_class_score + 1)
   margins[np.arange(num_train),y] = 0
-  loss = np.sum(margins) / num_train + 0.5 * reg * np.sum(W * W)  # for avoid memory overflow
+  loss = np.sum(margins) / num_train + reg * np.sum(W * W)  # for avoid memory overflow
 
   #############################################################################
   #                             END OF YOUR CODE                              #
@@ -102,7 +102,7 @@ def svm_loss_vectorized(W, X, y, reg):
   coefficient[np.arange(num_train),y] = 0
   coefficient[np.arange(num_train),y] = -np.sum(coefficient,axis=1)
   dW = np.dot(X.T,coefficient)
-  dW = dW/num_train + reg * W  # to avoid memory overflow
+  dW = dW/num_train + 2 * reg * W  # to avoid memory overflow
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################

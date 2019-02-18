@@ -96,7 +96,7 @@ class TwoLayerNet(object):
     #############################################################################
     shift_scores = scores - np.max(scores,axis = 1).reshape(-1,1)
     prob = np.exp(shift_scores) / (np.sum(np.exp(shift_scores),axis=1).reshape(-1,1))
-    loss = -np.sum(np.log(prob[np.arange(N),list(y)])) / N + 0.5 * reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
+    loss = -np.sum(np.log(prob[np.arange(N),list(y)])) / N + reg * (np.sum(W1 * W1) + np.sum(W2 * W2))
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
@@ -113,13 +113,13 @@ class TwoLayerNet(object):
     grads['b2'] = np.sum(dscore,axis = 0) / N   #db2 = (H,)
     
     grads['W2'] = np.dot(hidden_layer.T,dscore)   #dW2 = (H,C)
-    grads['W2'] = grads['W2'] / N + reg * W2  
+    grads['W2'] = grads['W2'] / N + 2 * reg * W2  
 
     dh = np.dot(dscore,W2.T) / N
     dReLu = (hidden_layer > 0) * dh
 
     grads['b1'] = np.sum(dReLu, axis = 0)
-    grads['W1'] = np.dot(X.T,dReLu) + reg * W1
+    grads['W1'] = np.dot(X.T,dReLu) + 2 * reg * W1
     #############################################################################
     #                              END OF YOUR CODE                             #
     #############################################################################
