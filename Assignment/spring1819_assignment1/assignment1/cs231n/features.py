@@ -4,6 +4,7 @@ from past.builtins import xrange
 import matplotlib
 import numpy as np
 from scipy.ndimage import uniform_filter
+from scipy.stats import moment
 
 
 def extract_features(imgs, feature_fns, verbose=False):
@@ -147,5 +148,24 @@ def color_histogram_hsv(im, nbin=10, xmin=0, xmax=255, normalized=True):
   # return histogram
   return imhist
 
+def grid_color_moment(im, ngrid=4):
+  """
+  Divide image into 4*4 grids, compute color moment for grids as features for the image.
 
-pass
+  Inputs:
+  - im: H x W x C array of pixel data for an RGB image.
+  - ngrid: number of slicing grids on each dimension
+  """
+  grids = np.split(im,ngrid,axis=0)
+  color_moment = np.zeros((ngrid,ngrid,im.shape[2],3))
+  
+  for i in range(len(grids)):
+    grids_horizontal = np.split(grids[i],ngrid,axis=1)
+
+    for j in range(len(grids_horizontal)):
+      for k in range(3):
+        color_moment[i,j,k,0] = np.mean(grids_horizontal[j][:,:,k].reshape(64,))
+        color_moment[i,j,k,1] = moment(grids_horizontal[j][:,:,k].reshape(64,),moment=2)
+        color_moment[i,j,k,2] = moment(grids_horizontal[j][:,:,k].reshape(64,),moment=3)
+  
+  return color_moment.reshape(ngrid * ngrid * im.shape[2] * 3,)
