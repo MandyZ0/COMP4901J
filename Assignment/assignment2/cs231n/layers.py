@@ -62,8 +62,6 @@ def affine_backward(dout, cache):
     # pass
     batch_size = x.shape[0] #N
     in_dim = w.shape[0] #D
-    out_dim = b.shape[0]  #M
-
     x_shaped = x.reshape(batch_size,in_dim)   #(N,D)
 
     dx = np.dot(dout,w.T).reshape(*x.shape)
@@ -92,8 +90,7 @@ def relu_forward(x):
     # TODO: Implement the ReLU forward pass.                                  #
     ###########################################################################
     # pass
-    out = x.copy()
-    out[x < 0] = 0
+    out = x * (x >= 0)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -117,9 +114,7 @@ def relu_backward(dout, cache):
     # TODO: Implement the ReLU backward pass.                                 #
     ###########################################################################
     # pass
-
-    dx = dout.copy()
-    dx[x<=0] = 0
+    dx = (x >= 0) * dout
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
