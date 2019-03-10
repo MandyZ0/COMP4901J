@@ -6,6 +6,20 @@ from cs231n.layers import *
 from cs231n.layer_utils import *
 
 
+def affine_bn_relu_forward(x , w , b, gamma, beta, bn_param):
+    a, fc_cache = affine_forward(x, w, b)
+    bn, bn_cache = batchnorm_forward(a, gamma, beta, bn_param)
+    out, relu_cache = relu_forward(bn)
+    cache = (fc_cache, bn_cache, relu_cache)
+    return out, cache
+
+def affine_bn_relu_backward(dout, cache):
+    fc_cache, bn_cache, relu_cache = cache
+    dbn = relu_backward(dout, relu_cache)
+    da, dgamma, dbeta =  batchnorm_backward_alt(dbn, bn_cache)
+    dx, dw, db = affine_backward(da, fc_cache)
+    return dx, dw, db, dgamma, dbeta
+
 class TwoLayerNet(object):
     """
     A two-layer fully-connected neural network with ReLU nonlinearity and
@@ -235,6 +249,7 @@ class FullyConnectedNet(object):
 
 
     def loss(self, X, y=None):
+        # print('----begin loss function----')
         """
         Compute loss and gradient for the fully-connected net.
 
@@ -265,38 +280,28 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         # pass
-        #old implementation:
-        # N = X.shape[0]
-        # reg = self.reg
-        # hidden_layer = X
-        # for i in range(self.num_layers):
-        #   W, b = self.params['W' + str(i+1)], self.params['b' + str(i+1)]
-        #   hidden_intermediate = np.dot(hidden_layer.reshape(N,-1),W) + b
-          
-        #   #batch normalization
-        #   if self.use_batchnorm:
-        #     hidden_intermediate = (hidden_intermediate - self.params['beta' + str(i+1)]) / self.params['gamma' + str(i+1)]
-          
-        #   hidden_layer = np.maximum(0,hidden_intermediate)
-        
         fw_cache = {}
         dp_cache = {}
         layer_input = X
+        # print('----begin forward----')
+        # print('----num_layers:',self.num_layers)
         for i in range(self.num_layers-1):
+          # print('----at',i,'layer----')
+          # print('input_layer.shape:',layer_input.shape)
           if self.use_batchnorm:
-            # layer_output, fw_cache[i] = affine_bn_relu_forward(layer_input, self.params['W'+str(i+1)], 
-            #                                                 self.params['b'+str(i+1)], self.params['gamma' + str(i+1)], 
-            #                                                 self.params['beta' + str(i+1)], self.bn_params[i])
-            a, fc_cache = affine_forward(layer_input, self.params['W'+str(i+1)], self.params['b'+str(i+1)])
-            bn, bn_cache = batchnorm_forward(a, self.params['gamma' + str(i+1)], self.params['beta' + str(i+1)], self.bn_params[i])
-            layer_input, relu_cache = relu_forward(bn)
-            fw_cache[i] = (fc_cache, bn_cache, relu_cache)
+            # print('---- in forward, use batchnorm,affine_bn_relu_forward')
+            layer_input, fw_cache[i] = affine_bn_relu_forward(layer_input, self.params['W'+str(i+1)], 
+                                                            self.params['b'+str(i+1)], self.params['gamma' + str(i+1)], 
+                                                            self.params['beta' + str(i+1)], self.bn_params[i])
 
           else:
+            # print('----in forward, no batchnorm, regular affine_relu_forward')
             layer_input, fw_cache[i] = affine_relu_forward(layer_input, self.params['W'+str(i+1)], self.params['b'+str(i+1)])
+            # print('----after affine_relu_forward, layer_input.shape:',layer_input.shape)
           if self.use_dropout:
+            # print('----in forward, use dropout, dropout_forward')
             layer_input, dp_cache[i] = dropout_forward(layer_input, self.dropout_param)
-        
+        # print('----in forward, last FC layer:')
         scores, fw_cache[self.num_layers] = affine_forward(layer_input,self.params['W'+str(self.num_layers)],self.params['b'+str(self.num_layers)])
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -320,28 +325,45 @@ class FullyConnectedNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
+        # print('----start backward----')
         reg = self.reg
-        loss, dscores = softmax_loss(scores,y)
-        loss = loss + 0.5 * reg * (self.params['W'+str(self.num_layers)] * self.params['W'+str(self.num_layers)])
-        dupgrade = dscores
+        # print('----before calculate loss, scores:',scores)
+        loss, dupgrade = softmax_loss(scores,y)
+        dhout = dupgrade
+        # print('----finish softmax loss, loss:',loss)
+        # print('----dscore:',dhout)
+        loss = loss + 0.5 * reg * (np.sum(self.params['W'+str(self.num_layers)] * self.params['W'+str(self.num_layers)]))
+        # print('---- in backward, last FC layer plain affine_backward:')
         dx, dw, db = affine_backward(dupgrade, fw_cache[self.num_layers])
+
         grads['W'+str(self.num_layers)] = dw + reg * self.params['W'+str(self.num_layers)]
         grads['b' + str(self.num_layers)] = db
+        dhout = dx
         for i in range(self.num_layers - 1):
           layer = self.num_layers - 1 - i - 1
+          loss = loss + 0.5 * self.reg * np.sum(self.params['W'+str(layer+1)] * self.params['W' + str(layer+1)])
+          # print('----at',layer,'layer----')
+          # print('----dhout.shape:',dhout.shape)
           if self.use_dropout:
-            dupgrade = dropout_backward(dupgrade, fw_cache[layer])
+            # print('----use drop out')
+            #print('fw_cache[layer]', dp_cache[layer])
+            dhout = dropout_backward(dhout, dp_cache[layer])
+            # print('dhout shape:',dhout.shape)
           
           if self.use_batchnorm:
-            dx,dgamma,dbeta = affine_bn_relu_backward(dupgrade,fw_cache[layer])
+            # print('----use batch normalization')
+            dx, dw, db, dgamma, dbeta = affine_bn_relu_backward(dhout,fw_cache[layer])
             grads['gamma'+str(layer + 1)] = dgamma
             grads['beta'+str(layer + 1)]  = dbeta
           else:
-            dx, dw, db = affine_relu_backward(dupgrade, fw_cache[layer])
+            # print('----no bacth normalziation, affine_relu_backward')
+            dx, dw, db = affine_relu_backward(dhout, fw_cache[layer])
+            # print('----after affine_relu_backward, dx shape:', dx.shape)
           
           grads['W'+str(layer+1)] = dw + self.reg * self.params['W'+str(layer+1)]
           grads['b'+str(layer+1)] = db
-          dupgrade = dx
+          dhout = dx
+          # print('----after one layer of backward, new upward gradient shape:',dupgrade.shape)
 
         # pass
         ############################################################################
